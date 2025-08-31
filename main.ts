@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+// 使用更新的 std 版本以确保兼容性
 import { handleModelsRequest, handleChatCompletionsRequest } from "./src/handlers.ts";
 import {
   addCorsHeaders,
@@ -9,8 +9,9 @@ import {
   createOptionsResponse
 } from "./src/utils.ts";
 
-const PORT = Deno.env.get("PORT") || 8000;
-const WANDB_API_KEY = Deno.env.get("WANDB_API_KEY");
+// Deno Deploy 会自动设置 PORT 环境变量
+const PORT = parseInt(Deno.env.get("PORT") || "8000");
+const WANDB_API_KEY = Deno.env.get("WANDB_API_KEY") || "";
 
 export async function handler(request: Request): Promise<Response> {
   try {
@@ -64,9 +65,13 @@ export async function handler(request: Request): Promise<Response> {
   }
 }
 
-// Deno Deploy适配
+// Deno Deploy 兼容性处理
+// Deno Deploy 会自动调用默认导出的 handler
+export default handler;
+
+// 本地开发环境
 if (import.meta.main) {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server starting...`);
   
   if (!WANDB_API_KEY) {
     console.warn(`⚠️  WARNING: WANDB_API_KEY environment variable is not set.`);
@@ -75,13 +80,12 @@ if (import.meta.main) {
     console.log(`✅ Using WANDB_API_KEY from environment`);
   }
 
-  serve(handler, { 
-    port: typeof PORT === "string" ? parseInt(PORT) : PORT,
-    onListen: ({ port }) => {
-      console.log(`🚀 Deno server listening on port ${port}`);
-    }
+  // 使用 Deno.serve 替代旧的 serve 函数（Deno 1.35+ 推荐）
+  Deno.serve({
+    port: PORT,
+    handler,
+    onListen: ({ hostname, port }) => {
+      console.log(`🚀 Server listening on http://${hostname}:${port}`);
+    },
   });
 }
-
-// Deno Deploy入口点
-export default handler;
